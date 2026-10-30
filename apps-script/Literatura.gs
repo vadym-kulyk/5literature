@@ -1,16 +1,16 @@
 /**
  * Література · 5 клас — прийом результатів уроків-квестів (сайт vadym-kulyk.github.io/5literature).
- * Окремий файл у проєкті Apps Script таблиці «Українська 5 — результати».
- * Пише лише в аркуші «Література 5» і «Література — відповіді»; аркуші з Firebase не чіпає.
+ * Код для Apps Script таблиці «5 lit» (Розширення → Apps Script → Code.gs).
+ * Аркуші: «Результати» (рядок на учня й урок) і «Відповіді» (письмові відповіді).
  * Один учень + один урок = один рядок, який оновлюється (ключ: урок + клас + ім'я).
  */
-const LIT_SHEET = 'Література 5';
-const LIT_TEXT_SHEET = 'Література — відповіді';
+const LIT_SHEET = 'Результати';
+const LIT_TEXT_SHEET = 'Відповіді';
 const LIT_HEAD = ['Ключ', 'Оновлено', 'Клас', 'Учень', 'Пара', 'Урок', 'Бали, %', 'Станцій виконано', 'Деталі', 'Скарби', 'Загадки', 'Таємна кімната'];
 const LIT_TEXT_HEAD = ['Ключ', 'Оновлено', 'Клас', 'Учень', 'Пара', 'Урок', 'Завдання', 'Рішення', 'Відповідь', 'Знаків'];
 
 function doGet() {
-  return ContentService.createTextOutput('Таблиця «Література 5» готова приймати результати.');
+  return ContentService.createTextOutput('Таблиця «5 lit» готова приймати результати.');
 }
 
 function doPost(e) {
@@ -68,6 +68,8 @@ function litSheet_(name, head, isMain) {
       sh.setColumnWidth(7, 180); sh.setColumnWidth(9, 480);
       sh.getRange('I:I').setWrap(true);
     }
+    const first = ss.getSheetByName('Аркуш1') || ss.getSheetByName('Sheet1');
+    if (first && first.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(first);
   }
   return sh;
 }
