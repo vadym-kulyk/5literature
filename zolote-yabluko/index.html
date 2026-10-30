@@ -278,6 +278,7 @@ label.f{display:grid;gap:6px;font-weight:700;font-size:15px}
   </div>
 </div>
 
+<script src="../config.js" onerror="window.SHEET_URL=window.SHEET_URL||''"></script>
 <script>
 'use strict';
 /* ---------- data ---------- */
@@ -432,9 +433,12 @@ const ICON={gate:'key',p1:'feather',p2:'arrow',p3:'egg',p4:'plume',quiz:'pom',or
 
 /* ---------- state ---------- */
 const KEY='zolote-yabluko-v1';
-let S={name:'',partner:'',done:{},tr:[],riddles:{},secret:false,cur:'gate',council:{text:'',choice:'',vals:[]},seen:{}};
+const SHEET_URL=String(window.SHEET_URL||'').trim();
+const CLASSES=['5L','5S'];
+let syncT,lastSig='',syncMsg='';
+let S={name:'',partner:'',cls:'',sent:0,done:{},tr:[],riddles:{},secret:false,cur:'gate',council:{text:'',choice:'',vals:[]},seen:{}};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')S=Object.assign(S,s)}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncSoon()}
 const score=()=>Object.values(S.done).reduce((a,b)=>a+b,0);
 const $=s=>document.querySelector(s);
 const app=$('#app');
@@ -481,9 +485,10 @@ function screenGate(){
     <p class="lead">Щороку хтось невидимий краде золоте яблуко з-за високого муру. Прочитай казку, розгадай її таємниці й набери <b style="color:var(--gold)">100 балів</b>. А в саду заховано <b style="color:var(--violet)">7 скарбів</b>: шукай, що блищить, і торкайся!</p>
     <div class="card gold">
       <div class="kicker">Перед мандрівкою</div>
-      <label class="f">Твоє ім'я<input type="text" id="nm" maxlength="30" autocomplete="off" placeholder="Напр.: Софія" value="${esc(S.name)}"></label>
+      <div class="f">Твій клас<div class="seg" id="clsSeg">${CLASSES.map(c=>`<button class="chip${S.cls===c?' on':''}" data-c="${c}">${c}</button>`).join('')}</div></div>
+      <label class="f">Твоє ім'я (як у списку класу)<input type="text" id="nm" maxlength="30" autocomplete="off" placeholder="Напр.: Софія" value="${esc(S.name)}"></label>
       <label class="f">Ім'я твоєї пари (для парних завдань)<input type="text" id="pt" maxlength="30" autocomplete="off" placeholder="Напр.: Марко" value="${esc(S.partner)}"></label>
-      <div class="row"><button class="btn" id="startBtn">Відчинити браму →</button><span class="small">Результати зберігаються на цьому пристрої.</span></div>
+      <div class="row"><button class="btn" id="startBtn">Відчинити браму →</button><span class="small" id="gateHint">${SHEET_URL?'Обери клас і впиши ім\'я, щоб результат потрапив до вчителя.':'Результати зберігаються на цьому пристрої.'}</span></div>
     </div>
     <div class="card">
       <div class="kicker">Як пройти урок</div>
@@ -581,6 +586,7 @@ function screenFinal(){
       <div class="stats"><div><b>${sc}</b><span>балів зі 100</span></div><div><b>${S.tr.length}/7</b><span>скарбів</span></div><div><b id="rsN">${rs}/5</b><span>загадок</span></div></div>
       ${sc<100?`<p class="small">Ще не всі станції пройдено. Відкрий 🗺 Мапу, щоб побачити, що лишилося.</p>`:''}
       <div class="row" style="justify-content:center"><button class="btn" id="copyRes">📋 Скопіювати результат</button></div>
+      ${SHEET_URL?`<div class="row" style="justify-content:center"><button class="btn btn--gold" id="sendRes">📤 Надіслати вчителю</button></div><p class="small" id="syncMsg">${esc(syncMsg||(S.sent?'Востаннє надіслано о '+new Date(S.sent).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})+'.':'Результати надсилаються автоматично.'))}</p>`:''}
       <textarea id="resTxt" class="hidden" readonly></textarea>
       <p class="small" id="copyFb"></p>
     </div>
@@ -625,7 +631,8 @@ function wire(id){
   if(id==='gate'){
     const nm=$('#nm'),pt=$('#pt');
     nm.oninput=()=>{S.name=nm.value.trim();save()};pt.oninput=()=>{S.partner=pt.value.trim();save()};
-    $('#startBtn').onclick=()=>go('p1');
+    $('#clsSeg').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{S.cls=b.dataset.c;save();$('#clsSeg').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b))});
+    $('#startBtn').onclick=()=>{if(SHEET_URL&&(!S.cls||!S.name)){const h=$('#gateHint');h.style.color='var(--wrong)';h.textContent=!S.cls?'Обери свій клас: 5L чи 5S.':'Впиши своє ім\'я.';(S.cls?$('#nm'):$('#clsSeg')).classList.add('shake');setTimeout(()=>app.querySelectorAll('.shake').forEach(x=>x.classList.remove('shake')),500);return}go('p1')};
   }
   if(/^p\d$/.test(id)){
     const P=PARTS[+id[1]-1];const box=app.querySelector('[data-cp]');
@@ -744,6 +751,7 @@ function wireFinal(){
   const sc=score();
   const txt=`Урок «Золоте яблуко» (Мідгард)\nУчень: ${S.name||'—'}${S.partner?'\nПара: '+S.partner:''}\nБали: ${sc}/100\nСкарби: ${S.tr.length}/7 · Загадки: ${Object.keys(S.riddles).length}/5${S.secret?' · Таємну кімнату відчинено':''}\n`+ST.filter(s=>s.pts).map(s=>`${S.done[s.id]!=null?'✓':'·'} ${s.t}: ${S.done[s.id]||0}/${s.pts}`).join('\n')+`\nДата: ${new Date().toLocaleString('uk-UA')}`;
   $('#copyRes').onclick=async()=>{const fb=$('#copyFb');try{await navigator.clipboard.writeText(txt);fb.textContent='Скопійовано! Встав у повідомлення вчителю.'}catch(e){const t=$('#resTxt');t.value=txt;t.classList.remove('hidden');t.select();fb.textContent='Виділи текст і скопіюй вручну.'}};
+  const sb=$('#sendRes');if(sb)sb.onclick=()=>syncNow(true);
   app.querySelectorAll('.riddle').forEach(r=>{const i=+r.dataset.i;r.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
     if(b.dataset.v===RIDDLES[i].a){b.classList.add('ok');r.classList.add('solved');r.querySelectorAll('.chip').forEach(x=>x.disabled=true);S.riddles[i]=1;save();sparkleAt(b);$('#rsN').textContent=Object.keys(S.riddles).length+'/5';if(Object.keys(S.riddles).length===5)toast('🧠','Усі <b>5 загадок</b> розгадано! Ти мудрий, як самітник із гори.')}
     else{b.classList.add('no','shake');b.disabled=true}})});
@@ -789,7 +797,7 @@ function closeMap(){$('#mapOv').hidden=true}
 $('#mapBtn').onclick=openMap;$('#mapClose').onclick=closeMap;$('#mapOv').onclick=e=>{if(e.target.id==='mapOv')closeMap()};
 let resetArm=false;
 $('#resetBtn').onclick=()=>{const b=$('#resetBtn');if(!resetArm){resetArm=true;b.textContent='Точно? Торкнись ще раз — усе зітреться';b.style.borderColor='var(--wrong)';setTimeout(()=>{resetArm=false;b.textContent='Почати спочатку';b.style.borderColor=''},4000);return}
-  try{localStorage.removeItem(KEY)}catch(e){}S={name:'',partner:'',done:{},tr:[],riddles:{},secret:false,cur:'gate',council:{text:'',choice:'',vals:[]},seen:{}};orderPicked=[];matchPairs={};matchSel=null;tfAns={};sortAns={};duoStep=0;closeMap();go('gate');resetArm=false;b.textContent='Почати спочатку';b.style.borderColor=''};
+  try{localStorage.removeItem(KEY)}catch(e){}S={name:'',partner:'',cls:'',sent:0,done:{},tr:[],riddles:{},secret:false,cur:'gate',council:{text:'',choice:'',vals:[]},seen:{}};orderPicked=[];matchPairs={};matchSel=null;tfAns={};sortAns={};duoStep=0;closeMap();go('gate');resetArm=false;b.textContent='Почати спочатку';b.style.borderColor=''};
 addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&h!==S.cur&&RENDER[h])go(h)});
 
 /* ---------- effects ---------- */
@@ -806,6 +814,24 @@ function emit(x,y,n,spread,opts){if(reduce)return;const d=devicePixelRatio;const
 function sparkleAt(el,big){const r=el.getBoundingClientRect();emit(r.left+r.width/2,r.top+r.height/2,big?40:18,big?7:4)}
 function burst(){emit(innerWidth/2,innerHeight*.35,70,8,{up:3})}
 function bigCelebrate(){[0,250,500,800].forEach((t,i)=>setTimeout(()=>emit(innerWidth*(.2+.2*i),innerHeight*.3,60,9,{up:4}),t))}
+
+/* ---------- results → teacher's Google Sheet (works on the GitHub site) ---------- */
+function payload(){return {lesson:'zolote-yabluko',title:'Золоте яблуко (кримськотатарська казка)',cls:S.cls,name:(S.name||'').trim(),partner:(S.partner||'').trim(),score:score(),
+  tasks:ST.filter(s=>s.pts).map(s=>({t:s.t,p:S.done[s.id]||0,max:s.pts})),treasures:S.tr.length,riddles:Object.keys(S.riddles).length,secret:!!S.secret,
+  texts:S.council.text.trim()?[{id:'council',t:'Рада мудреців',choice:S.council.choice,a:S.council.text.trim()}]:[]}}
+function syncSoon(){if(!SHEET_URL||!(S.name||'').trim()||!S.cls)return;clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),8000)}
+async function syncNow(manual){
+  if(!SHEET_URL)return;clearTimeout(syncT);
+  if(!(S.name||'').trim()||!S.cls){if(manual)toast('✏️','Спочатку на станції «Брама саду» обери клас і впиши ім\'я.');return}
+  const body=JSON.stringify(payload());if(!manual&&body===lastSig)return;
+  try{await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body});
+    lastSig=body;S.sent=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+    syncMsg='Надіслано вчителю о '+new Date(S.sent).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})+'.';
+    if(manual)toast('📤','Результати надіслано вчителю!')}
+  catch(e){syncMsg='Немає зв\'язку з таблицею. Перевір інтернет і натисни «Надіслати вчителю» ще раз.';if(manual)toast('⚠️','Не вдалося надіслати. Перевір інтернет.')}
+  const m=document.getElementById('syncMsg');if(m)m.textContent=syncMsg;
+}
+addEventListener('visibilitychange',()=>{if(document.visibilityState!=='hidden'||!SHEET_URL||!(S.name||'').trim()||!S.cls)return;const body=JSON.stringify(payload());if(body===lastSig)return;try{if(navigator.sendBeacon(SHEET_URL,new Blob([body],{type:'text/plain;charset=utf-8'}))){lastSig=body;S.sent=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}}catch(e){}});
 
 /* start */
 go((location.hash.slice(1)&&RENDER[location.hash.slice(1)])?location.hash.slice(1):S.cur,true);
