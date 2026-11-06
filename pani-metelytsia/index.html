@@ -193,7 +193,7 @@ label.f{display:grid;gap:6px;font-weight:700;font-size:15px}
 .st.done .pt{color:var(--right)}
 
 /* hidden treasures */
-.treasure{position:absolute;z-index:3;width:44px;height:44px;display:grid;place-items:center;background:none;border:0;padding:0;opacity:.42;transition:opacity .3s,transform .3s}
+.treasure{position:absolute;z-index:3;width:44px;height:44px;display:grid;place-items:center;background:none;border:0;padding:0;opacity:.6;transition:opacity .3s,transform .3s}
 .treasure svg{width:26px;height:26px;filter:drop-shadow(0 0 4px rgba(247,201,21,.5))}
 .treasure::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px 3px #fff8c8;opacity:0;animation:glint 7s infinite}
 .treasure:hover{opacity:.9;transform:scale(1.15)}
@@ -331,7 +331,7 @@ const PARTS=[
   cp:{q:'Чому дівчина стрибнула в криницю?',o:['Хотіла скупатися','Мачуха звеліла дістати впущене веретено','Її штовхнула сестра','Побачила на дні золото'],a:1}
  },
  {id:'p2',title:'Піч і яблуня',scene:'oven',cap:'Піч просить: «Витягни нас, бо згоримо!»',trs:null,
-  after:['apple','«Струсни мене, мої яблука вже стиглі!»',['apple','left:6%;top:12%']],
+  after:['apple','«Струсни мене, мої яблука вже стиглі!»',['apple','right:9%;top:52%']],
   text:[
    `Пішла дівчина галявиною і побачила піч, повну хліба. А хліб гукав до неї: «Ой, витягни нас, витягни, бо згоримо! Ми вже давно спеклися!» Дівчина взяла ${G('лопату')} і витягла всі хлібини одну за одною.`,
    `Пішла вона далі й дійшла до яблуні, вкритої яблуками. Яблуня гукнула: «Ой, струсни мене, струсни! Мої яблука вже давно стиглі!» Дівчина трусила дерево, аж поки яблука не посипалися, як дощ. Тоді склала їх акуратно в купку й пішла далі.`,
