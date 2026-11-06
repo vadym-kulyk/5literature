@@ -6,6 +6,7 @@
 |---|---|
 | «Золоте яблуко» (кримськотатарська казка) | [`zolote-yabluko/`](zolote-yabluko/) |
 | «Пані Метелиця» (брати Ґрімм) | [`pani-metelytsia/`](pani-metelytsia/) |
+| Справа братів Ґрімм (біографія, детективний формат) | [`grimm/`](grimm/) |
 
 ## 1. Увімкнути сайт (GitHub Pages, 1 хв)
 GitHub → репозиторій `5literature` → **Settings → Pages** → Source: *Deploy from a branch* → гілка `main`, тека `/ (root)` → **Save**.
