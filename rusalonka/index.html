@@ -725,7 +725,7 @@ function wireCouncil(){
     if(c.text.trim().length>=40)ok++;else{f.push('допишіть пояснення');ta.classList.add('shake')}
     const good=VALUES.filter(v=>v[1]).map(v=>v[0]);const allGood=good.every(v=>c.vals.includes(v))&&c.vals.every(v=>good.includes(v));
     $('#cVals').querySelectorAll('.chip').forEach(b=>{const v=b.dataset.v;b.classList.remove('ok','no');if(c.vals.includes(v))b.classList.add(good.includes(v)?'ok':'no')});
-    if(allGood)ok++;else f.push('у кроці 3 правильних чеснот чотири (а заздрість і жадібність — це вади)');
+    if(allGood)ok++;else f.push('у кроці 3 правильних відповідей чотири, а дві — зайві');
     setTimeout(()=>{app.querySelectorAll('.shake').forEach(x=>x.classList.remove('shake'))},500);
     if(ok<n)setTimeout(()=>{$('#fb-council').textContent='Майже! Лишилося: '+f.join('; ')+'.'},0);
     return [ok,n];

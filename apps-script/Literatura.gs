@@ -6,7 +6,7 @@
  */
 const LIT_SHEET = 'Результати';
 const LIT_TEXT_SHEET = 'Відповіді';
-const LIT_HEAD = ['Ключ', 'Оновлено', 'Клас', 'Учень', 'Пара', 'Урок', 'Бали, %', 'Станцій виконано', 'Деталі', 'Скарби', 'Загадки', 'Таємна кімната'];
+const LIT_HEAD = ['Ключ', 'Оновлено', 'Клас', 'Учень', 'Пара', 'Урок', 'Бали, %', 'Станцій виконано', 'Деталі', 'Скарби', 'Загадки', 'Таємна кімната', 'Сесія'];
 const LIT_TEXT_HEAD = ['Ключ', 'Оновлено', 'Клас', 'Учень', 'Пара', 'Урок', 'Завдання', 'Рішення', 'Відповідь', 'Знаків'];
 
 function doGet() {
@@ -24,11 +24,25 @@ function doPost(e) {
     const cls = litSafe_(d.cls).slice(0, 10);
     const pair = litSafe_(d.partner).slice(0, 60);
     const lesson = litSafe_(d.title || d.lesson).slice(0, 120);
-    const key = [d.lesson, cls, String(d.name).trim().toLowerCase()].join('|').slice(0, 200);
-    const details = (d.tasks || []).slice(0, 40).map((t) => litSafe_(t.t) + ': ' + litNum_(t.p) + '/' + litNum_(t.max)).join('\n');
-    const done = (d.tasks || []).filter((t) => t.p > 0 && t.p === t.max).length + '/' + (d.tasks || []).length;
-    litUpsert_(litSheet_(LIT_SHEET, LIT_HEAD, true), [key, now, cls, name, pair, lesson, litNum_(d.score), done, details,
-      litNum_(d.treasures) + '/7', litNum_(d.riddles) + '/5', d.secret ? 'так' : '']);
+    let key = [d.lesson, cls, String(d.name).trim().toLowerCase()].join('|').slice(0, 200);
+    let details = (d.tasks || []).slice(0, 40).map((t) => litSafe_(t.t) + ': ' + litNum_(t.p) + '/' + litNum_(t.max)).join('\n');
+    let done = (d.tasks || []).filter((t) => t.p > 0 && t.p === t.max).length + '/' + (d.tasks || []).length;
+    let tr = litNum_(d.treasures) + '/7', rd = litNum_(d.riddles) + '/5';
+    const sid = litSafe_(d.sid).slice(0, 20);
+    const main = litSheet_(LIT_SHEET, LIT_HEAD, true);
+    if (d.monitor) {
+      // Моніторинг: якщо цей учень уже має рядок з іншої сесії (очистив браузер / інший пристрій),
+      // нову сесію пишемо окремим рядком і не чіпаємо першу.
+      done = litNum_(d.answered) + '/' + litNum_(d.total) + ' відповідей';
+      tr = ''; rd = '';
+      details = litSafe_(d.note) + '\n' + details;
+      const prev = litFind_(main, key);
+      if (prev && prev.sid && sid && prev.sid !== sid && prev.answered > 0) {
+        key = key + '#' + sid;
+        details = '⚠ ПОВТОРНИЙ ПОЧАТОК (очищено браузер або інший пристрій) — див. попередній рядок\n' + details;
+      }
+    }
+    litUpsert_(main, [key, now, cls, name, pair, lesson, litNum_(d.score), done, details, tr, rd, d.secret ? 'так' : '', sid]);
     (d.texts || []).slice(0, 10).forEach((x) => {
       const a = litSafe_(x.a).slice(0, 5000);
       if (!a) return;
@@ -74,7 +88,18 @@ function litSheet_(name, head, isMain) {
   return sh;
 }
 
+function litFind_(sh, key) {
+  const n = sh.getLastRow();
+  if (n < 2) return null;
+  const vals = sh.getRange(2, 1, n - 1, 13).getValues();
+  for (let i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) === key) return { row: i + 2, sid: String(vals[i][12] || ''), answered: parseInt(String(vals[i][7]), 10) || 0 };
+  }
+  return null;
+}
+
 function litUpsert_(sh, row) {
+  if (sh.getRange(1, row.length).getValue() === '') sh.getRange(1, row.length).setValue(LIT_HEAD[row.length - 1] || '').setFontWeight('bold');
   const n = sh.getLastRow();
   if (n > 1) {
     const keys = sh.getRange(2, 1, n - 1, 1).getValues();
